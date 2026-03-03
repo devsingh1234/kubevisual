@@ -9,9 +9,13 @@ import {
     Cpu,
     Globe,
     Shield,
-    FileCode2
+    FileCode2,
+    AlertTriangle,
+    AlertCircle,
+    BadgeAlert
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { motion } from 'framer-motion';
 
 const iconMap: Record<string, any> = {
     Pod: Box,
@@ -44,16 +48,47 @@ const colorMap: Record<string, string> = {
 
 export function K8sNode({ data, selected }: { data: any, selected: boolean }) {
     const Icon = iconMap[data.kind] || iconMap.default;
-    const colors = colorMap[data.kind] || 'bg-gray-500/10 border-gray-500/50 text-gray-600 dark:text-gray-400';
+    const baseColors = colorMap[data.kind] || 'bg-gray-500/10 border-gray-500/50 text-gray-600 dark:text-gray-400';
+
+    // Status overrides for borders
+    let colors = baseColors;
+    let StatusIcon = null;
+    let statusColor = '';
+
+    if (data.status === 'critical') {
+        colors = baseColors.replace(/border-[a-z]+-500\/50/, 'border-red-600 dark:border-red-500 border-2');
+        StatusIcon = BadgeAlert;
+        statusColor = 'text-red-600 dark:text-red-400';
+    } else if (data.status === 'error') {
+        colors = baseColors.replace(/border-[a-z]+-500\/50/, 'border-red-500/80 border-2');
+        StatusIcon = AlertCircle;
+        statusColor = 'text-red-500';
+    } else if (data.status === 'warning') {
+        colors = baseColors.replace(/border-[a-z]+-500\/50/, 'border-amber-500/80 border-2');
+        StatusIcon = AlertTriangle;
+        statusColor = 'text-amber-500';
+    }
 
     return (
         <div className={cn(
-            "px-4 py-3 rounded-xl border-2 bg-background/95 backdrop-blur-sm min-w-[250px] transition-all duration-300 transform cursor-pointer",
+            "px-4 py-3 rounded-xl border-2 bg-background/95 backdrop-blur-sm min-w-[250px] transition-all duration-300 transform cursor-pointer relative",
             colors,
             selected
-                ? "ring-2 ring-ring ring-offset-2 ring-offset-background shadow-xl scale-105 border-transparent z-50"
+                ? "ring-2 ring-ring ring-offset-2 ring-offset-background shadow-xl scale-105 z-50"
                 : "shadow-sm hover:shadow-md hover:scale-[1.02] hover:-translate-y-0.5"
         )}>
+            {data.status === 'critical' && (
+                <motion.div
+                    initial={{ opacity: 0.5, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1.1 }}
+                    transition={{ repeat: Infinity, duration: 1, repeatType: "reverse" }}
+                    className="absolute -top-2 -right-2 bg-red-600 text-white p-1.5 rounded-full shadow-lg z-10"
+                    title="Critical Security Finding"
+                >
+                    <BadgeAlert className="w-4 h-4" />
+                </motion.div>
+            )}
+
             <Handle type="target" position={Position.Top} className="w-3 h-3 bg-muted-foreground/30 left-1/2 -ml-1.5" />
 
             <div className="flex items-center gap-3">
@@ -70,11 +105,20 @@ export function K8sNode({ data, selected }: { data: any, selected: boolean }) {
                 </div>
             </div>
 
-            {data.namespace && data.namespace !== 'default' && (
-                <div className="mt-3 text-[10px] px-2 py-0.5 rounded bg-muted text-muted-foreground inline-block">
-                    ns: {data.namespace}
-                </div>
-            )}
+            <div className="flex items-center justify-between mt-3">
+                {data.namespace && data.namespace !== 'default' && (
+                    <div className="text-[10px] px-2 py-0.5 rounded bg-muted text-muted-foreground inline-block">
+                        ns: {data.namespace}
+                    </div>
+                )}
+
+                {StatusIcon && (
+                    <div className={cn("flex items-center gap-1 text-[10px] font-bold", statusColor)} title={`${data.diagnosticsCount} validations, ${data.findingsCount} security findings`}>
+                        <StatusIcon className="w-3 h-3" />
+                        {(data.diagnosticsCount || 0) + (data.findingsCount || 0)} issues
+                    </div>
+                )}
+            </div>
 
             <Handle type="source" position={Position.Bottom} className="w-3 h-3 bg-muted-foreground/30 left-1/2 -ml-1.5 transition-colors hover:bg-primary" />
         </div>

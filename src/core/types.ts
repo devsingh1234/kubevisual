@@ -1,3 +1,5 @@
+import type { Diagnostic, SecurityFinding, RiskSummary } from './diagnosticsTypes';
+
 export interface K8sResource {
     id: string; // unique identifier (kind-namespace-name)
     apiVersion: string;
@@ -26,14 +28,13 @@ export interface K8sRelationship {
     isBroken?: boolean;
 }
 
-export interface SecurityInsight {
-    resourceId: string;
-    severity: 'high' | 'medium' | 'low';
-    title: string;
-    description: string;
-}
+
 
 export interface ParseResult {
     resources: K8sResource[];
+    relationships: K8sRelationship[];
+    diagnostics: Diagnostic[];
+    securityFindings: SecurityFinding[];
+    riskSummary: RiskSummary | null;
     errors: string[];
 }

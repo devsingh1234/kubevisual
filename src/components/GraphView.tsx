@@ -40,7 +40,13 @@ export function GraphView({ parsedData, onNodeSelect }: GraphViewProps) {
         }
 
         const relationships = buildRelationships(parsedData.resources);
-        const { nodes: rawNodes, edges: rawEdges } = buildGraph(parsedData.resources, relationships);
+        const { nodes: rawNodes, edges: rawEdges } = buildGraph({
+            ...parsedData,
+            relationships,
+            diagnostics: parsedData.diagnostics || [],
+            securityFindings: parsedData.securityFindings || [],
+            riskSummary: parsedData.riskSummary || null
+        });
         const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(rawNodes, rawEdges, direction);
 
         setNodes([...layoutedNodes]);

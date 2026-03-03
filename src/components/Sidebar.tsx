@@ -1,4 +1,5 @@
-import type { K8sResource, SecurityInsight } from '../core/types';
+import type { K8sResource } from '../core/types';
+import type { SecurityFinding } from '../core/diagnosticsTypes';
 import { X, Info, ShieldAlert, Code2 } from 'lucide-react';
 import YAML from 'yaml';
 import { analyzeSecurity } from '../core/securityAnalyzer';
@@ -70,10 +71,13 @@ export function Sidebar({ node, onClose }: SidebarProps) {
                             <h3>Security Insights</h3>
                         </div>
                         <div className="space-y-2">
-                            {securityInsights.map((insight: SecurityInsight, idx: number) => (
+                            {securityInsights.map((insight: SecurityFinding, idx: number) => (
                                 <div key={idx} className="p-3 bg-destructive/10 border-l-2 border-destructive rounded-r-md">
-                                    <div className="font-semibold text-sm text-destructive mb-1">{insight.title}</div>
-                                    <div className="text-xs text-muted-foreground">{insight.description}</div>
+                                    <div className="font-semibold text-sm text-destructive mb-1 capitalize flex items-center justify-between">
+                                        {insight.category} Risk
+                                        <span className="text-[10px] bg-destructive/20 px-2 rounded-full uppercase">{insight.severity}</span>
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">{insight.message}</div>
                                 </div>
                             ))}
                         </div>

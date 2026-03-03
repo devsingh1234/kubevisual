@@ -4,6 +4,10 @@ import type { K8sResource, ParseResult } from './types';
 export function parseYaml(yamlString: string): ParseResult {
     const result: ParseResult = {
         resources: [],
+        relationships: [],
+        diagnostics: [],
+        securityFindings: [],
+        riskSummary: null,
         errors: []
     };
 
