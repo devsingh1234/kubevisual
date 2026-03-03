@@ -1,0 +1,163 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: store-prod
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: store-prod
+  labels:
+    app: store
+    tier: frontend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: store
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        app: store
+        tier: frontend
+    spec:
+      containers:
+      - name: web
+        image: nginx:1.21.0
+        ports:
+        - containerPort: 80
+        envFrom:
+        - configMapRef:
+            name: frontend-config
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-svc
+  namespace: store-prod
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    app: store
+    tier: frontend
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: store-ingress
+  namespace: store-prod
+spec:
+  rules:
+  - host: store.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend-svc
+            port:
+              number: 80
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config
+  namespace: store-prod
+data:
+  API_URL: "http://backend-svc.store-prod.svc.cluster.local"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: store-prod
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: store
+      tier: backend
+  template:
+    metadata:
+      labels:
+        app: store
+        tier: backend
+    spec:
+      containers:
+      - name: api
+        image: backend-api:latest
+        env:
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: password
+        volumeMounts:
+        - name: data-storage
+          mountPath: /data
+      volumes:
+      - name: data-storage
+        persistentVolumeClaim:
+          claimName: backend-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-svc
+  namespace: store-prod
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+  selector:
+    app: store
+    tier: backend
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-credentials
+  namespace: store-prod
+type: Opaque
+data:
+  password: cGFzc3dvcmQxMjM=
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: backend-pvc
+  namespace: store-prod
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-policy
+  namespace: store-prod
+spec:
+  podSelector:
+    matchLabels:
+      tier: backend
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          tier: frontend
+    ports:
+    - protocol: TCP
+      port: 8080
